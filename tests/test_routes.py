@@ -16,6 +16,19 @@ class TestRoutes(unittest.TestCase):
         response = self.app.post('/store_readings', json=data)
         self.assertEqual(response.status_code, 200)
 
+    def test_store_readings_with_missing_data(self):
+        # Sending request with missing "count" data
+        data = {
+            "id": "36d5658a-6908-479e-887e-a949ec199272",
+            "readings": [{"timestamp": "2021-08-14T12:08:15+01:00"}]
+        }
+        response = self.app.post('/store_readings', json=data)
+        self.assertEqual(response.status_code, 400)
+
+        # Verify the malformed reading isn't stored in our database
+        readings = in_memory_db.get("36d5658a-6908-479e-887e-a949ec199272", {})
+        self.assertNotIn("2021-08-14T12:08:15+01:00", readings)
+
     def test_fetch_readings(self):
         device_id = "36d5658a-6908-479e-887e-a949ec199272"
         response = self.app.get(f'/fetch_readings/{device_id}')

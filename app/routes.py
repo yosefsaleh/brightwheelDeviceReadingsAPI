@@ -20,7 +20,7 @@ def store_readings():
         count = reading.get("count")
 
         if not timestamp or count is None:
-            continue
+            return jsonify({"error": "Malformed reading provided"}), 400
 
         # If the reading for this timestamp already exists, ignore it.
         if timestamp not in in_memory_db[device_id]:
