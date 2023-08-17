@@ -47,6 +47,10 @@ def store_readings():
 
 @app.route('/fetch_readings/<device_id>', methods=['GET'])
 def fetch_readings(device_id):
-    readings = in_memory_db.get(device_id, {})
+    if device_id not in in_memory_db:
+        return jsonify({"error": "Device ID not found"}), 404  # 404 status code indicates 'Not Found
 
-    return jsonify({"readings": [{"timestamp": k, "count": v} for k, v in readings.items()]}), 200
+    readings = in_memory_db.get(device_id, {})
+    # Create a sorted list based on the timestamp.
+    sorted_readings = sorted(readings.items(), key=lambda x: x[0])  # x[0] is the timestamp
+    return jsonify({"readings": [{"timestamp": k, "count": v} for k, v in sorted_readings]}), 200

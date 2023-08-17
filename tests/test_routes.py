@@ -48,6 +48,13 @@ class TestRoutes(unittest.TestCase):
 
     def test_fetch_readings(self):
         device_id = "36d5658a-6908-479e-887e-a949ec199272"
+
+        # Store some readings first
+        self.app.post('/store_readings', json={
+            "id": device_id,
+            "readings": [{"timestamp": "2021-08-14T12:08:15+01:00", "count": 10}]
+        })
+
         response = self.app.get(f'/fetch_readings/{device_id}')
         self.assertEqual(response.status_code, 200)
 
@@ -55,17 +62,27 @@ class TestRoutes(unittest.TestCase):
         non_existent_device_id = "some-random-id"
         response = self.app.get(f'/fetch_readings/{non_existent_device_id}')
         data = response.get_json()
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(data['readings'], [])
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(data['error'], "Device ID not found")
 
-    def test_fetch_without_data(self):
-        device_id = "36d5658a-6908-479e-887e-a949ec199272"
-        # Clear database to ensure it doesn't contain data for the given device_id
-        in_memory_db.clear()
-        response = self.app.get(f'/fetch_readings/{device_id}')
-        data = response.get_json()
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(data['readings'], [])
+    def test_fetch_sorted_readings(self):
+        # Storing out-of-order readings
+        data = {
+            "id": "test-device-id",
+            "readings": [
+                {"timestamp": "2021-08-15T12:10:15+01:00", "count": 30},
+                {"timestamp": "2021-08-15T12:08:15+01:00", "count": 10},
+                {"timestamp": "2021-08-15T12:09:15+01:00", "count": 20}
+            ]
+        }
+        self.app.post('/store_readings', json=data)
+
+        response = self.app.get('/fetch_readings/test-device-id')
+        response_data = response.get_json()
+
+        # The expected sorted order is 10, 20, 30 based on timestamps
+        counts = [reading['count'] for reading in response_data['readings']]
+        self.assertEqual(counts, [10, 20, 30])
 
     def tearDown(self):
         in_memory_db.clear()
